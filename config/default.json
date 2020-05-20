@@ -1,0 +1,46 @@
+{
+    "dbServer": {
+        "database": "gateway",
+        "host": "mongodb://localhost:27017/oa_gateway"
+    },
+    "webServer": {
+        "url": "https://dev.openage.in/gateway",
+        "port": 3005
+    },
+    "queueServer": {
+        "disabled": true
+    },
+    "support": {
+        "name": "Open Age",
+        "email": "support@openage.in"
+    },
+    "providers": {
+        "directory": {
+            "url": "https://dev.openage.in/directory/api"
+        },
+        "send-it": {
+            "url": "https://dev.openage.in/sendIt/api"
+        },
+        "discover": {
+            "url": "https://dev.openage.in/discover/api"
+        },
+        "drive": {
+            "url": "https://dev.openage.in/drive/api"
+        }
+    },
+    "folders": {},
+    "logger": {
+        "console": {
+            "level": "silly",
+            "handleExceptions": true,
+            "json": false,
+            "colorize": true
+        }
+    },
+    "formats": {
+        "date": "DD-MM-YYYY"
+    },
+    "organization": {
+        "timeZone": "IST"
+    }
+}
