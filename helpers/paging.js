@@ -66,6 +66,7 @@ exports.extract = req => {
     }
 
     return {
+        sort: req.query.sort || 'timestamp',
         pageNo: pageNo,
         limit: limit,
         skip: offset

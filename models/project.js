@@ -55,8 +55,8 @@ module.exports = {
         size: Number,
         burnt: Number,
         time: Number,
-        roles: [String]
-
+        roles: [String],
+        status: String // active, inactive
     }],
 
     parent: { type: mongoose.Schema.Types.ObjectId, ref: 'project' },

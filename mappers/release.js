@@ -4,7 +4,7 @@ const userMapper = require('./user')
 const taskMapper = require('./task')
 const workflowStateMapper = require('./workflow-state')
 
-exports.toModel = (entity) => {
+exports.toModel = (entity, context) => {
     const model = {
         id: entity.id,
         code: entity.code,
@@ -18,6 +18,7 @@ exports.toModel = (entity) => {
             start: entity.actual.start,
             finish: entity.actual.finish
         },
+        members: (entity.members || []).filter(m => m.status !== 'inactive').map(m => memberMapper.toModel(m, context)),
         isClosed: entity.isClosed
     }
 
@@ -59,9 +60,6 @@ exports.toModel = (entity) => {
         model.status = model.states.find(i => i.isCurrent)
     }
 
-    if (entity.members && entity.members.length) {
-        model.members = entity.members.map(memberMapper.toModel)
-    }
     return model
 }
 

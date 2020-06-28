@@ -6,6 +6,8 @@ const defaultConfig = require('config').get('organization')
 
 const users = require('../services/users')
 
+const journal = require('../providers/journal')
+
 exports.create = async (claims, logger) => {
     let context = {
         id: claims.id,
@@ -124,6 +126,28 @@ exports.create = async (claims, logger) => {
         context.logger.context.tenant = {
             id: context.tenant.id,
             code: context.tenant.code
+        }
+    }
+
+    context.journal = {
+
+        update: (entity, entityType) => {
+            context._journal = journal.start(entity, entityType, 'updated', context)
+        },
+        create: (entity, entityType) => {
+            context._journal = journal.start(entity, entityType, 'created', context)
+        },
+        add: (field, value, oldValue) => {
+            if (context._journal) {
+                context._journal.add(field, value, oldValue)
+            }
+        },
+        end: async (message) => {
+            if (context._journal) {
+                await context._journal.end(message)
+            }
+
+            context._journal = undefined
         }
     }
 

@@ -110,7 +110,7 @@ module.exports = (serviceName, mapperName) => {
                 }
             }
 
-            let message = `added: ${added}, updated: ${updated} employee(s)`
+            let message = `added: ${added}, updated: ${updated} item(s)`
             req.context.logger.debug(message)
             return message
         },
@@ -118,9 +118,11 @@ module.exports = (serviceName, mapperName) => {
             if (!entityService.remove) {
                 throw new Error(`METHOD_NOT_SUPPORTED`)
             }
-            await entityService.remove(req.params.id, req.context)
+            let count = await entityService.remove(req.params.id, req.context)
 
-            return 'Removed'
+            count = count || 1
+
+            return `${count} item(s) removed`
         }
     }
 }

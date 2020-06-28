@@ -1,6 +1,7 @@
 'use strict'
 
 const taskStatusMapper = require('./state')
+const memberMapper = require('./member')
 
 exports.toModel = (entity, context) => {
     const model = {
@@ -16,6 +17,7 @@ exports.toModel = (entity, context) => {
             start: entity.actual.start,
             finish: entity.actual.finish
         },
+        members: (entity.members || []).map(m => memberMapper.toModel(m, context)),
         isClosed: entity.isClosed
     }
 

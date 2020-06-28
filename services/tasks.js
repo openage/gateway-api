@@ -8,6 +8,7 @@ const sprints = require('./sprints')
 const users = require('./users')
 const workflows = require('./workflows')
 const templates = require('./task-templates')
+const members = require('./members')
 
 const populate = [{
     path: 'owner'
@@ -29,7 +30,16 @@ const populate = [{
 }, {
     path: 'dependsOn'
 }, {
-    path: 'children'
+    path: 'children',
+    populate: [{
+        path: 'workflow'
+    }, {
+        path: 'assignee'
+    }, {
+        path: 'members.user'
+    }, {
+        path: 'project'
+    }]
 }, {
     path: 'members.user'
 }]
@@ -98,6 +108,10 @@ const set = async (model, entity, context) => {
         entity.percentage = model.percentage
     }
 
+    if (model.members) {
+        await members.update(entity, model.members, context)
+    }
+
     if (model.dependsOn) {
         let dependsOn = await exports.get(model.dependsOn, context)
 
@@ -125,6 +139,19 @@ const set = async (model, entity, context) => {
         await parent.save()
     }
 
+    if (model.children && model.children.length && (!entity.children || entity.children.length != model.children.length)) {
+        entity.children = []
+        for (const child of model.children) {
+            if (entity.entity) {
+                child.entity = entity.entity
+            }
+            if (entity.project) {
+                child.project = await projects.get(entity.project, context)
+            }
+            entity.children.push(await this.create(child, context))
+        }
+    }
+
     if (model.project) {
         entity.project = await projects.get(model.project, context)
     }
@@ -150,12 +177,16 @@ const set = async (model, entity, context) => {
     }
 
     if (model.meta) {
-        entity.meta = model.meta
+        entity.meta = entity.meta || {}
+        Object.getOwnPropertyNames(model.meta).forEach(key => {
+            entity.meta[key] = model.meta[key]
+        })
+        entity.markModified('meta')
     }
 
     let workflowCode = entity.type
 
-    if (model.workflow && !entity.workflow) {
+    if (model.workflow && model.workflow.code && !entity.workflow) {
         workflowCode = model.workflow.code
     }
 
@@ -183,14 +214,19 @@ const set = async (model, entity, context) => {
 
     if (model.status) {
         let statusCode = typeof model.status === 'string' ? model.status : model.status.code
+        let oldStatus = entity.status ? entity.status.code : null
         entity.status = entity.workflow.states.find(i => i.code.toLowerCase() === statusCode.toLowerCase())
 
         if (!entity.status) {
             entity.status = entity.workflow.states.find(i => i.isFirst)
         }
 
-        if (entity.isClosed !== model.status.isFinal) {
-            entity.isClosed = model.status.isFinal
+        entity.status.date = new Date()
+
+        context.journal.add('status', entity.status.code, oldStatus)
+
+        if (entity.isClosed !== (model.status.isFinal || entity.status.isFinal)) {
+            entity.isClosed = model.status.isFinal || entity.status.isFinal
             recalculate = true
         }
     }
@@ -207,8 +243,12 @@ exports.create = async (model, context) => {
         model = await templates.build(model, model.meta, context)
     }
 
+    model.parent = await this.get(model.parent, context)
+
     if (!model.project) {
-        if (model.entity) {
+        if (model.parent && model.parent.project) {
+            model.project = model.parent.project
+        } else if (model.entity) {
             model.project = {
                 code: `${model.entity.type}-${model.entity.id}`,
                 name: model.entity.name,
@@ -219,7 +259,7 @@ exports.create = async (model, context) => {
 
     let project = await projects.get(model.project, context)
 
-    if (!project) {
+    if (!project && model.project) {
         project = await projects.create(model.project, context)
     }
 
@@ -227,7 +267,9 @@ exports.create = async (model, context) => {
     if (model.code) {
         code = model.code.toLowerCase()
     } else {
-        code = await projects.newTaskNo(project.id, context)
+        if (project) {
+            code = await projects.newTaskNo(project.id, context)
+        }
     }
 
     let entity = await exports.get(model, context)
@@ -247,17 +289,25 @@ exports.create = async (model, context) => {
         code: code,
         type: type,
         owner: context.user,
+        createdOn: new Date(),
         organization: context.organization,
         tenant: context.tenant
     })
 
     if (model.entity) {
         entity.entity = {
-            id: model.entity.id.toLowerCase(),
+            id: model.entity.id.toString().toLowerCase(),
             type: model.entity.type.toLowerCase(),
             name: model.entity.name
         }
     }
+
+    context.journal.create({
+        id: entity.id,
+        code: entity.code,
+        type: 'task',
+        name: entity.type
+    })
 
     await set(model, entity, context)
 
@@ -265,26 +315,66 @@ exports.create = async (model, context) => {
 
     await offline.queue('task', 'create', entity, context)
 
+    await context.journal.end()
+
     return entity
 }
 
 exports.update = async (id, model, context) => {
     let entity = await exports.get(id, context)
     if (!entity) {
-        entity = await db.task.findOne({ externalId: id }).populate(populate)
+        entity = await db.task.findOne({
+            externalId: id
+        }).populate(populate)
     }
+
+    context.journal.update({
+        id: entity.id,
+        code: entity.code,
+        type: 'task',
+        name: entity.type
+    })
+
     const prevStatus = entity.status.code
     await set(model, entity, context)
-    if (entity.status.code != prevStatus) {
+    if (entity.status.code !== prevStatus) {
+        if (entity.processing && entity.processing == 'immidate') {
+            context.processSync = true
+        }
         await offline.queue('task', 'updated', entity, context)
     }
+    await context.journal.end()
     return entity.save()
 }
 
 exports.search = async (query, page, context) => {
+    let sorting = 'recent'
+    if (page && page.sort) {
+        sorting = page.sort
+    }
+
+    let sort = {
+        timeStamp: 1
+    }
+
+    switch (sorting.toLowerCase()) {
+        case 'recent':
+            sort.timeStamp = -1
+            break
+        case 'timestamp':
+            sort.timeStamp = -1
+            break
+        case 'subject':
+            sort.subject = 1
+            break
+    }
+
     let where = {
-        organization: context.organization,
         tenant: context.tenant
+    }
+
+    if (context.organization) {
+        where.organization = context.organization
     }
 
     if (query.entity) {
@@ -298,7 +388,13 @@ exports.search = async (query, page, context) => {
         if (typeof query.status === 'string') {
             where['status.code'] = query.status.toLowerCase()
         } else if (query.status.code) {
-            where['status.code'] = query.status.code.toLowerCase()
+            if (query.status.code.includes(',')) {
+                where['status.code'] = {
+                    $in: query.status.code.split(',').map(i => i)
+                }
+            } else {
+                where['status.code'] = query.status.code.toLowerCase()
+            }
         }
 
         if (query.status.isFirst !== undefined) {
@@ -322,39 +418,39 @@ exports.search = async (query, page, context) => {
     }
 
     if (query.release !== undefined) {
-        if (query.release !== null) {
-            where.release = await releases.get(query.release, context)
-        } else {
+        if (query.release === null || (query.release.id || query.release.code || query.release) === 'none') {
             where.release = null
+        } else {
+            where.release = await releases.get(query.release, context)
         }
     }
 
     if (query.sprint !== undefined) {
-        if (query.sprint !== null && !(query.sprint.id === 'none' || query.sprint.id === 'backlog' || query.sprint.code === 'backlog')) {
-            where.sprint = await sprints.get(query.sprint, context)
-        } else {
+        if (query.sprint === null || (query.sprint.id || query.sprint.code || query.sprint) === 'none' || (query.sprint.id || query.sprint.code || query.sprint) === 'backlog') {
             where.sprint = null
+        } else {
+            where.sprint = await sprints.get(query.sprint, context)
         }
     }
 
     if (query.parent !== undefined) {
-        if (query.parent !== null && query.parent.id !== 'none') {
-            where.parent = await exports.get(query.parent, context)
-        } else {
+        if (query.parent === null || (query.parent.id || query.parent.code || query.parent) === 'none') {
             where.parent = null
+        } else {
+            where.parent = await exports.get(query.parent, context)
         }
     }
 
     if (query.dependsOn !== undefined) {
-        if (query.dependsOn !== null) {
-            where.dependsOn = await exports.get(query.dependsOn, context)
-        } else {
+        if (query.dependsOn === null || (query.dependsOn.id || query.dependsOn.code || query.dependsOn) === 'none') {
             where.dependsOn = null
+        } else {
+            where.dependsOn = await exports.get(query.dependsOn, context)
         }
     }
 
     if (query.assignee !== undefined) {
-        if (query.assignee === null) {
+        if (query.assignee === null || (query.assignee.id || query.assignee.code || query.assignee) === 'none') {
             where.assignee = null // unassigned
         } else if (query.assignee === 'my') {
             where.assignee = context.user // my tasks
@@ -396,6 +492,23 @@ exports.search = async (query, page, context) => {
         where.type = query.type
     }
 
+    if (query.meta) {
+        for (var prop in query.meta) {
+            if (prop.includes('name') || prop.includes('Name')) {
+                where[`meta.${prop}`] = {
+                    $regex: '^' + query.meta[prop],
+                    $options: 'i'
+                }
+            } else if (prop.includes('colleges') || prop.includes('courses') || prop.includes('batches')) {
+                where[`meta.${prop}`] = {
+                    $in: query.meta[prop].split(',').map(i => i)
+                }
+            } else {
+                where[`meta.${prop}`] = query.meta[prop]
+            }
+        }
+    }
+
     if (query.isClosed !== undefined) {
         where.isClosed = query.isClosed
     }
@@ -403,9 +516,9 @@ exports.search = async (query, page, context) => {
     const count = await db.task.find(where).count()
     let items
     if (page) {
-        items = await db.task.find(where).skip(page.skip).limit(page.limit).populate(populate)
+        items = await db.task.find(where).sort(sort).skip(page.skip).limit(page.limit).populate(populate)
     } else {
-        items = await db.task.find(where).populate(populate)
+        items = await db.task.find(where).sort(sort).populate(populate)
     }
 
     return {
@@ -472,4 +585,14 @@ exports.get = async (query, context) => {
         where['externalId'] = query.externalId
         return db.task.findOne(where).populate(populate)
     }
+}
+
+exports.remove = async (id, context) => {
+    let entity = await this.get(id, context, false)
+
+    for (const child of entity.children) {
+        await this.remove(child.id, context)
+    }
+
+    await entity.remove()
 }

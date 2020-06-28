@@ -1,10 +1,11 @@
 const db = require('../models')
 
 const projects = require('./projects')
+const members = require('./members')
 
 const populate = 'members.user'
 
-const set = (model, entity, context) => {
+const set = async (model, entity, context) => {
     if (model.code !== undefined) {
         entity.code = model.code.toLowerCase()
     }
@@ -47,6 +48,10 @@ const set = (model, entity, context) => {
         if (model.actual.finish !== undefined) {
             entity.actual.finish = model.actual.finish
         }
+    }
+
+    if (model.members) {
+        await members.update(entity, model.members, context)
     }
 
     return entity

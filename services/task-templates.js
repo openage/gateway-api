@@ -24,7 +24,7 @@ const merge = (model, data) => {
 }
 
 const set = async (model, entity, context) => {
-    if (model.code !== undefined && model.code != entity.code) {
+    if (model.code !== undefined && model.code !== entity.code) {
         let exists = await exports.get(model.code, context)
 
         if (exists) {
@@ -74,7 +74,11 @@ const set = async (model, entity, context) => {
     }
 
     if (model.meta) {
-        entity.meta = model.meta
+        entity.meta = entity.meta || {}
+        Object.getOwnPropertyNames(model.meta).forEach(key => {
+            entity.meta[key] = model.meta[key]
+        })
+        entity.markModified('meta')
     }
 
     if (model.children) {
@@ -170,6 +174,7 @@ const taskBuilder = async (model, template, meta, context) => {
     model.size = template.size
     model.priority = template.priority
     model.meta = meta
+    model.processing = template.processing
     model.type = template.type
     model.workflow = template.workflow
     model.hooks = template.hooks

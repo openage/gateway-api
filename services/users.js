@@ -171,11 +171,16 @@ const getFromDirectory = async (query, context) => {
 const getByCode = async (code, context) => {
     context.logger.start('services/users:getByCode')
 
-    let user = await db.user.findOne({
+    let where = {
         code: code.toLowerCase(),
-        tenant: context.tenant,
-        organization: context.organization
-    }).populate(populate)
+        tenant: context.tenant
+    }
+
+    if (context.organization) {
+        where.organization = context.organization
+    }
+
+    let user = await db.user.findOne(where).populate(populate)
 
     if (!user) {
         user = await db.user.findOne({
@@ -210,11 +215,16 @@ const getByRoleId = async (roleId, context) => {
 const getByEmail = async (email, context) => {
     context.logger.start('services/users:getByEmail')
 
-    let user = await db.user.findOne({
+    let where = {
         email: email.toLowerCase(),
-        organization: context.organization,
         tenant: context.tenant
-    }).populate(populate)
+    }
+
+    if (context.organization) {
+        where.organization = context.organization
+    }
+
+    let user = await db.user.findOne(where).populate(populate)
 
     if (user) { return user }
 
@@ -224,11 +234,16 @@ const getByEmail = async (email, context) => {
 const getByPhone = async (phone, context) => {
     context.logger.start('services/users:getByPhone')
 
-    let user = await db.user.findOne({
+    let where = {
         phone: phone,
-        organization: context.organization,
         tenant: context.tenant
-    }).populate(populate)
+    }
+
+    if (context.organization) {
+        where.organization = context.organization
+    }
+
+    let user = await db.user.findOne(where).populate(populate)
 
     if (user) { return user }
 

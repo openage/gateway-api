@@ -1,6 +1,6 @@
 'use strict'
 
-const webHook = require('../../helpers/web-hook')
+const webHook = require('../../../../helpers/web-hook')
 
 exports.process = async (entity, context) => {
     if (entity.toJson) {
@@ -11,7 +11,7 @@ exports.process = async (entity, context) => {
     entity.status = entity.workflow.states.find(item => item.code == entity.status.code)
     await webHook.send({
         entity: 'task',
-        action: 'update',
+        action: 'create',
         when: 'after'
     }, entity, context)
 }

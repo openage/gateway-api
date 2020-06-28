@@ -55,6 +55,7 @@ exports.toSummary = (entity, context) => {
     return {
         id: entity.id,
         code: entity.code,
+        email: entity.email,
         profile: setProfile(entity.profile, context)
     }
 }

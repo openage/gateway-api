@@ -5,7 +5,7 @@ module.exports = {
     type: { type: String },
     subject: String,
     description: String,
-
+    createdOn: Date,
     entity: {
         id: String,
         name: String,
@@ -21,7 +21,7 @@ module.exports = {
     actual: { start: Date, finish: Date },
 
     isClosed: Boolean,
-
+    processing: String,
     priority: Number,
     order: Number,
     percentage: Number,
@@ -32,15 +32,19 @@ module.exports = {
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
         size: Number,
         burnt: Number,
-        roles: [String]
+        time: Number,
+        roles: [String],
+        status: String // active, inactive
     }],
 
     status: {
         code: String,
         name: String,
+        label: String,
         isFirst: Boolean,
         isCancelled: Boolean,
         isFinal: Boolean,
+        date: Date,
         next: [String]
     },
 

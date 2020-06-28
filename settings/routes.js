@@ -31,7 +31,6 @@ module.exports.configure = (app, logger) => {
     var api = apiRoutes(app, { context: { builder: contextBuilder.create } })
     api.model('users').register('REST', { permissions: 'tenant.user' })
     api.model('projects').register('REST', { permissions: 'tenant.user' })
-    api.model('members').register('REST', { permissions: 'tenant.user' })
     api.model('sprints').register('REST', { permissions: 'tenant.user' })
     api.model('releases').register('REST', { permissions: 'tenant.user' })
     api.model('workflows').register('REST', { permissions: 'tenant.user' })

@@ -2,6 +2,7 @@
 
 const db = require('../models')
 const types = require('./project-types')
+const members = require('./members')
 
 const populate = [{
     path: 'parent'
@@ -75,6 +76,10 @@ const set = async (model, entity, context) => {
         entity.velocity = model.velocity
     }
 
+    if (model.members) {
+        await members.update(entity, model.members, context)
+    }
+
     entity.config = entity.config || {
         task: {
             lastNo: 0,
@@ -143,7 +148,7 @@ exports.create = async (model, context) => {
 
     if (model.entity) {
         entity.entity = {
-            id: model.entity.id.toLowerCase(),
+            id: model.entity.id.toString().toLowerCase(),
             type: model.entity.type.toLowerCase(),
             name: model.entity.name
         }
@@ -209,6 +214,9 @@ exports.search = async (query, page, context) => {
 
 exports.get = async (query, context) => {
     context.logger.silly('services/projects:get')
+    if (!query) {
+        return
+    }
     let where = {
         organization: context.organization,
         tenant: context.tenant

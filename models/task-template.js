@@ -10,6 +10,7 @@ module.exports = {
 
     size: Number,
     priority: Number,
+    processing: String,
     hooks: [],
     type: { type: String },
     workflow: { type: mongoose.Schema.Types.ObjectId, ref: 'workflow' },

@@ -2,18 +2,15 @@
 
 const userMapper = require('./user')
 
-exports.toModel = (entity) => {
-    const model = {
-        id: entity.id,
-        role: entity.role,
-        status: entity.status
+exports.toModel = (entity, context) => {
+    return {
+        user: userMapper.toModel(entity.user, context),
+        size: entity.size || 0,
+        burnt: entity.size || 0,
+        time: entity.size || 0,
+        roles: entity.roles || [],
+        status: entity.status || 'active'
     }
-
-    if (entity.user) {
-        model.user = userMapper.toModel(entity.user)
-    }
-
-    return model
 }
 
 exports.toSearchModel = (entities) => {

@@ -13,15 +13,23 @@ module.exports = {
         action: String,
         name: String,
         estimate: Number, // in minutes
-        hooks: {
-            before: String,
-            after: String
-        },
+        hooks: [{
+            trigger: {
+                when: String, // values - before, after(default),
+                entity: String,
+                action: String
+            },
+            actions: [{
+                handler: String, // values - frontend, backend (default)
+                type: { type: String },
+                config: Object // { "url": ":drive/docs/idcard/${data.code}", "action": "GET", "headers": {"x-role-key": "${context.role.key}" }
+            }]
+        }],
         isFirst: Boolean,
         isPaused: Boolean,
         isCancelled: Boolean,
         isFinal: Boolean,
-
+        permissions: [String],
         next: [String]
     }],
 

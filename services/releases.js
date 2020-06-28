@@ -4,8 +4,7 @@ const db = require('../models')
 const projects = require('./projects')
 const workflowTypes = require('./workflows')
 const states = require('./states')
-
-// const approverService = require('./approvers')
+const members = require('./members')
 
 const moment = require('moment')
 
@@ -102,6 +101,10 @@ const set = async (model, entity, context) => {
         entity.description = model.description
     }
 
+    if (model.members) {
+        await members.update(entity, model.members, context)
+    }
+
     if (plan && entity.states && entity.states.length) {
         let firstState = entity.states.find(i => i.type.isFirst)
         firstState.isCurrent = true
@@ -120,20 +123,20 @@ const create = async (model, context) => {
         model.code = model.code.toLowerCase()
     } else if (model.type) {
         switch (model.type.toLowerCase()) {
-        case 'major':
-            model.code = await projects.newMajorReleaseNo(project, context)
-            break
+            case 'major':
+                model.code = await projects.newMajorReleaseNo(project, context)
+                break
 
-        case 'minor':
-            model.code = await projects.newMinorReleaseNo(project, context)
-            break
+            case 'minor':
+                model.code = await projects.newMinorReleaseNo(project, context)
+                break
 
-        case 'patch':
-            model.code = await projects.newPatchReleaseNo(project, context)
-            break
+            case 'patch':
+                model.code = await projects.newPatchReleaseNo(project, context)
+                break
 
-        default:
-            throw new Error(`release type: ${model.type} is not supported`)
+            default:
+                throw new Error(`release type: ${model.type} is not supported`)
         }
     }
 

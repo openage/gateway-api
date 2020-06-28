@@ -5,8 +5,14 @@ const taskMapper = require('../../../../mappers/task')
 exports.process = async (entity, context) => {
     const assignee = await users.get(entity.assignee, context)
 
+    if (!assignee) {
+        context.logger.debug('skipping message: not assigned')
+        return
+    }
+
     if (assignee.id === context.user.id) {
         context.logger.debug('skipping message: self assigned')
+        return
     }
 
     let model = taskMapper.toModel(entity, context)

@@ -1,46 +1,50 @@
 'use strict'
+
+const hookMapper = require('./hook')
+
 exports.toModel = (entity, workflow, context) => {
     var item = {
         code: entity.code,
         action: entity.action || entity.name,
         name: entity.name,
+        label: entity.label,
         icon: entity.icon,
         estimate: entity.estimate,
         isFirst: entity.isFirst,
         isPaused: entity.isPaused,
         isCancelled: entity.isCancelled,
         isFinal: entity.isFinal,
-        hooks: {
-            before: '',
-            after: ''
-        },
+        permissions: entity.permissions || [],
+        hooks: hookMapper.toModel(entity.hooks, context),
+        date: entity.date,
         next: []
-    }
-
-    if (entity.hooks) {
-        item.hooks.before = entity.hooks.before
-        item.hooks.after = entity.hooks.after
     }
 
     item.next = []
 
-    for (const model of entity.next) {
-        if (workflow) {
-            workflow.states.forEach(s => {
-                if (s.code == model) {
-                    item.next.push({
-                        code: s.code,
-                        action: s.action,
-                        name: s.name,
-                        icon: s.icon,
-                        estimate: s.estimate,
-                        isFirst: s.isFirst,
-                        isPaused: s.isPaused,
-                        isCancelled: s.isCancelled,
-                        isFinal: s.isFinal
-                    })
-                }
-            })
+    if (entity.next) {
+        for (const model of entity.next) {
+            if (workflow && workflow.states) {
+                workflow.states.forEach(s => {
+                    if (s.code === model) {
+                        item.next.push({
+                            code: s.code,
+                            action: s.action,
+                            name: s.name,
+                            icon: s.icon,
+                            label: s.label,
+                            estimate: s.estimate,
+                            isFirst: s.isFirst,
+                            isPaused: s.isPaused,
+                            isCancelled: s.isCancelled,
+                            isFinal: s.isFinal,
+                            date: s.date,
+                            hooks: hookMapper.toModel(s.hooks, context),
+                            permissions: s.permissions || []
+                        })
+                    }
+                })
+            }
         }
     }
 

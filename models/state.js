@@ -3,6 +3,7 @@ const mongoose = require('mongoose')
 module.exports = {
     code: String,
     name: String,
+    label: String,
     estimate: Number, // in minutes
     icon: String,
     isFirst: Boolean,

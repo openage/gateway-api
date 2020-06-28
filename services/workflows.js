@@ -20,7 +20,11 @@ const set = async (model, entity, context) => {
     }
 
     if (model.meta) {
-        entity.meta = model.meta
+        entity.meta = entity.meta || {}
+        Object.getOwnPropertyNames(model.meta).forEach(key => {
+            entity.meta[key] = model.meta[key]
+        })
+        entity.markModified('meta')
     }
 
     if (model.states) {
@@ -36,13 +40,22 @@ const set = async (model, entity, context) => {
                 isPaused: !!stateModel.isPaused,
                 isCancelled: !!stateModel.isCancelled,
                 isFinal: !!stateModel.isFinal,
-                hooks: {},
+                hooks: (stateModel.hooks || []).map(t => {
+                    return {
+                        trigger: {
+                            when: t.trigger.when || 'after'
+                        },
+                        actions: t.actions.map(a => {
+                            return {
+                                handler: a.handler || 'backend',
+                                type: a.type || 'http',
+                                config: a.config || {}
+                            }
+                        })
+                    }
+                }),
+                permissions: stateModel.permissions || [],
                 next: []
-            }
-
-            if (stateModel.hooks) {
-                state.hooks.before = stateModel.hooks.before
-                state.hooks.after = stateModel.hooks.after
             }
 
             if (stateModel.next) {

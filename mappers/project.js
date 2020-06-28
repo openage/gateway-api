@@ -8,7 +8,6 @@ exports.toModel = (entity, context) => {
         code: entity.code,
         name: entity.name,
         type: typeMapper.toModel(entity.type, context),
-        members: [],
         plan: {
             start: entity.plan.start,
             finish: entity.plan.finish
@@ -18,11 +17,8 @@ exports.toModel = (entity, context) => {
             finish: entity.actual.finish
         },
         sprints: [],
+        members: (entity.members || []).filter(m => m.status !== 'inactive').map(m => memberMapper.toModel(m, context)),
         isClosed: entity.isClosed
-    }
-
-    if (entity.members && entity.members.length) {
-        model.members = entity.members.map(m => memberMapper.toModel(m, context))
     }
 
     if (entity.sprints && entity.sprints.length) {

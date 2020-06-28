@@ -19,7 +19,9 @@ module.exports = {
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
         size: Number,
         burnt: Number,
-        roles: [String]
+        time: Number,
+        roles: [String],
+        status: String // active, inactive
     }],
 
     states: [{
