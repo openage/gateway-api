@@ -48,7 +48,7 @@
     "handlebars": "^4.7.0",
     "json2csv": "^3.11.5",
     "jsonwebtoken": "^8.5.1",
-    "moment": "^2.24.0",
+    "moment": "^2.29.4",
     "mongodb": "^3.1.10",
     "mongoose": "^5.7.13",
     "mongoose-find-one-or-create": "^0.2.0",
