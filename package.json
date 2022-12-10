@@ -42,7 +42,7 @@
     "datauri": "^2.0.0",
     "ejs": "^2.6.1",
     "exceljs": "^1.6.2",
-    "express": "^4.16.2",
+    "express": "^4.17.3",
     "findorcreate-promise": "^1.2.0",
     "formidable": "^1.2.1",
     "handlebars": "^4.7.0",
